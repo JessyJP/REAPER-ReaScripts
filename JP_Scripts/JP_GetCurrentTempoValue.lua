@@ -14,7 +14,7 @@
    local DEBUG_ON    = false;
    local projectInd  = 0; -- the current project index
    local var_section = "CustomWebInterfaceWithTempo"; -- for the MASTER track
-   local envelopeNm  = "Tempo map";
+   local tempoEnvelopeName  = "Tempo map";
    -- These are the keys for the variables in the HTML file
    local htmlKey_tempo       = "TEMPOSSTRING"; 
    local htmlKey_refreshHz   = "HZ_REFRESH"; 
@@ -54,51 +54,62 @@
   return tonumber( reaper.GetExtState(var_section, htmlKey_refreshHz) );
   end
   
+  
+  -- Math rounding method
+  function round(num)
+      return math.floor(num + 0.5)
+  end
+  
 ---------------------------------------------------------------------------------------------------
 --[[ MAIN function ]]--
 
   -- The main function that gets the tempo/bpm and sets the states of a variable
   function Main_updateTempoInfo()
       
-    -- Get Porject Tempo
+    -- Get Project Tempo
     local project_bpm, bpi = reaper.GetProjectTimeSignature2(projectInd)
+    local playrate = reaper.Master_GetPlayRate();
     -- Get the tempo for the cursor
-    local tempo_cursor = reaper.Master_GetTempo();
-    -- If the the playback is stopped, the playhead is at the cursor position
-    local tempo_palyhead = tempo_cursor;
-    local tempo_palyhead_effectiveBMP = tempo_palyhead;
+    local tempo_edit_cursor = "x";
+    -- If the the playback is stopped, the play-head is at the cursor position
+    local tempo_palyhead = "x";
     
+    -- Get the tempo envelope on the master track and the number of tempo points
+    local envelope = reaper.GetTrackEnvelopeByName(reaper.GetMasterTrack(projectInd), tempoEnvelopeName)
+    local envelope_point_count = reaper.CountEnvelopePoints(envelope)
     
-    -- Get the tempo(effective BPM) at the play-head time
-    if reaper.GetPlayState() == 1 then  
-      -- Get the variables and parameters needed
-      local envelope = reaper.GetTrackEnvelopeByName( reaper.GetMasterTrack(projectInd), envelopeNm);
-      local playPositionTime   = reaper.GetPlayPosition();
+    -- Only if the tempo envelope contains points
+    if envelope_point_count > 0 then
+      -- Get tempo at edit cursor
+      tempo_edit_cursor = reaper.Master_GetTempo();
+      -- The decimal places in the webpage therefore the floored number should be enough
+      tempo_edit_cursor = round(tempo_edit_cursor);
+    
+      -- Get the tempo(effective BPM) at the play-head time
+      if (reaper.GetPlayState() == 1) then  
+    
       
-      -- Get the two versions
-      tempo_palyhead = reaper.GetEnvelopePointByTime(envelope,playPositionTime);
-      tempo_palyhead_effectiveBMP = reaper.TimeMap_GetDividedBpmAtTime(playPositionTime);
-      
-      -- If the evelope is empty then 
-      if (tempo_palyhead == -1) then
-        tempo_palyhead = tempo_cursor;
-      end 
+        -- Get the variables and parameters needed
+        local playPositionTime   = reaper.GetPlayPosition();
         
-     -- current_bpm = reaper.TimeMap_GetDividedBpmAtTime(cursor)
-      if DEBUG_ON then
+        -- Get the two versions
+        tempo_palyhead_pt_index = reaper.GetEnvelopePointByTime(envelope,playPositionTime);
+        tempo_palyhead = reaper.TimeMap_GetDividedBpmAtTime(playPositionTime);
+        tempo_palyhead = round(tempo_palyhead)
+        
+        -- current_bpm = reaper.TimeMap_GetDividedBpmAtTime(cursor)
+        if DEBUG_ON then
         Debug("[envelope  ]:"..tostring(envelope));
         Debug("[playPositionTime  ]:"..tostring(playPositionTime));
+        end
       end
-    end
     
+  end
     -- Compose Output
-    -- The decimal places in the webpage therefore the floored number should be enough
-    tempo_cursor = math.floor(tempo_cursor);
-    tempo_palyhead = math.floor(tempo_palyhead);
     local OutputString = tostring(project_bpm).."_"..
-                         tostring(tempo_cursor) .. "_".. 
-                         tostring(tempo_palyhead) .. "_" ..
-                         tostring(tempo_palyhead_effectiveBMP);
+                         tostring(tempo_edit_cursor) .. "_".. 
+                         tostring(tempo_palyhead) .. "_".. 
+                         tostring(playrate);
                    
     -- Set the array state variable state
     reaper.SetExtState(var_section, htmlKey_tempo ,OutputString,false);
@@ -108,39 +119,40 @@
     --
     if DEBUG_ON then
       local OSCmessage1 = "TEMPO\t" .. project_bpm;
-      local OSCmessage2 = "TEMPO\t" .. tempo_cursor;
+      local OSCmessage2 = "TEMPO\t" .. tempo_edit_cursor;
       local OSCmessage3 = "TEMPO\t" .. tempo_palyhead;
-      local OSCmessage4 = "TEMPO\t" .. tempo_palyhead_effectiveBMP;
+      local OSCmessage4 = "TEMPO\t" .. playrate;
       Debug("------------------------------");
       Debug("[project_bpm  ]:"..OSCmessage1);
-      Debug("[tempo_cursor  ]:"..OSCmessage2);
-      Debug("[tempo_palyhead]:"..OSCmessage3);
-      Debug("[tempo_palyhead_effectiveBMP  ]" ..OSCmessage4);
+      Debug("[tempo_edit_cursor  ]:"..OSCmessage2);
+      Debug("[tempo_palyhead  ]" ..OSCmessage3);
+      Debug("[playrate  ]" ..OSCmessage4);
       Debug("[OutputString  ]" ..OutputString);
     end
   end
   
 ---------------------------------------------------------------------------------------------------
   
+  Debug("Current num ["..tostring(getNumClients()).."] "..
+      "Current delta["..tostring(getClientsDelta()).."]");
   --[[ CALL THE MAIN FUNCTION PERIODICALLY]]--
   -- Get the number of clients and increment or decrement
   if (getNumClients() == nil) then -- This is the first instance of the script
-     Debug("Current num ["..tostring(getNumClients()).."] "..
-           "Current Deleta["..tostring(getClientsDelta()).."]");
+     -- Initialize the tempo string
+     reaper.SetExtState(var_section, htmlKey_tempo ,"999_999_999_999",false);
+	 reaper.SetExtState(var_section, htmlKey_refreshHz ,tonumber(20),false);
      setNumClients(1);
   else
-    Debug("Current num ["..tostring(getNumClients()).."] "..
-          "Current Deleta["..tostring(getClientsDelta()).."]")
-     setNumClients(getNumClients()+1);
+     setNumClients(tonumber(getNumClients())+tonumber(getClientsDelta()));
   end
   setClientsDelta(0);
 
   
   if getNumClients() == 1 then
   
-      -- VARIABLES: Initial values for call and timing timing
+      -- VARIABLES: Initial values for call and timing. Global variables
       callCount  = 0; -- call counter
-      startTimer=reaper.time_precise();-- Initia
+      startTimer=reaper.time_precise();-- Initial
       timeOut = 1/getRefreshRate();-- Initialize the refresh rate
       
       function runloop()
@@ -157,7 +169,7 @@
                   Debug("Number of clients["..getNumClients().."]");
                   Debug("Call ["..callCount.."]");
                   Debug("Refresh Rate Hz["..getRefreshRate().."]");
-          Debug("Current Deleta["..tostring(getClientsDelta()).."]");
+          Debug("Current delta["..tostring(getClientsDelta()).."]");
               end
               -- Call the main function to update the tempos
               Main_updateTempoInfo();
