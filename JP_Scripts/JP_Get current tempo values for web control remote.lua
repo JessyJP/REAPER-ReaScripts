@@ -51,14 +51,24 @@
   
   -- GET function for the refresh rate
   function getRefreshRate()
-  return tonumber( reaper.GetExtState(var_section, htmlKey_refreshHz) );
+	return tonumber( reaper.GetExtState(var_section, htmlKey_refreshHz) );
   end
   
   
   -- Math rounding method
   function round(num)
-      return math.floor(num + 0.5)
+	return math.floor(num + 0.5)
   end
+  
+  function wholeFloatToInt(num)
+  	-- Check if num is a whole number
+  	if num % 1 == 0 then
+  		return math.floor(num)  -- Return as integer if whole number
+  	else
+		return num  -- Return as-is if float
+  	end
+  end
+
   
 ---------------------------------------------------------------------------------------------------
 --[[ MAIN function ]]--
@@ -77,6 +87,9 @@
     -- Get the tempo envelope on the master track and the number of tempo points
     local envelope = reaper.GetTrackEnvelopeByName(reaper.GetMasterTrack(projectInd), tempoEnvelopeName)
     local envelope_point_count = reaper.CountEnvelopePoints(envelope)
+	
+	-- Format the project bpm
+	project_bpm = wholeFloatToInt(project_bpm);
     
     -- Only if the tempo envelope contains points
     if envelope_point_count > 0 then
@@ -104,7 +117,7 @@
         end
       end
     
-  end
+    end
     -- Compose Output
     local OutputString = tostring(project_bpm).."_"..
                          tostring(tempo_edit_cursor) .. "_".. 
