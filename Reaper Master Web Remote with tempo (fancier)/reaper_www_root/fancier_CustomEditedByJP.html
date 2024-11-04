@@ -331,31 +331,7 @@ function wwr_onreply(results) {
       break; 
 <!-- JP edit:2 begin -->            
 	  case "EXTSTATE":
-			if (tok[2] == "TEMPOSSTRING")
-			{
-				<!-- Get the Tempo array String and delimit the values -->
-				tempoValues = tok[3];
-				tempoValues = tempoValues.split("_"); 
-				projectBPM  = tempoValues[0];
-				tempoCursor = tempoValues[1];
-				tempoPlayhead = tempoValues[2];
-				tempoPlayhead_effectiveBMP = tempoValues[3]
-				<!-- Show the Cursor tempo string -->
-				document.getElementById("project_BPM").textContent = projectBPM;
-				document.getElementById("tempo_cursor").textContent = tempoCursor;
-				if (tempoCursor != tempoPlayhead)
-				{
-					document.getElementById("tempo_playhead").textContent = tempoPlayhead;
-					document.getElementById("tempo_playhead_effectiveBMP").textContent = tempoPlayhead;
-					
-				}
-				else
-				{
-					document.getElementById("tempo_playhead").textContent = "";
-					document.getElementById("tempo_playhead_effectiveBMP").textContent = "";
-				}
-				
-			}	
+			displayTempoValues(tok);
 			break;
 <!-- JP edit:2 end -->			
 			
@@ -914,10 +890,7 @@ function wwr_onreply(results) {
 } 
     
 function on_record_button(e) {
-  var x;
-  last_track_cnt = nTrack;    
-  for (x = 1; x < last_track_cnt && 0==(recarmCount); x ++);
-  if (x < last_track_cnt || confirm("no tracks are armed, start record?")) wwr_req(1013);
+  if (recarmCount > 0 || confirm("no tracks are armed, start record?")) wwr_req(1013);
   return false;
 }     
 
@@ -1046,20 +1019,10 @@ function init(){
   }
 }
 
-<!-- JP edit:3 begin -->
-function closePageHandler()
-{
-	<!-- wwr_req("SET/EXTSTATE/CustomWebInterfaceWithTempo/CLIENTDELTA/"+clientDelta)); -->
-	clientDelta=0;
-}
-<!-- window.onunload=closePageHandler; -->
-<!-- addEventListener('unload', (event) => { alert("aaaa") }); -->
-<!-- onunload = (event) => { alert("+++")}; -->
 
 </script>
 </head>
-<body onLoad="init();calculateScale()" onunload="closePageHandler();">
-<!-- JP edit:3 end -->
+<body onLoad="init();calculateScale()">
 <div id="colWrap">
 <div id="col1">
 <div id="optionsBar" class="optionsBar">
@@ -1187,11 +1150,13 @@ function closePageHandler()
     <text id="timeUnits" text-anchor="middle"; transform="matrix(1 0 0 1 155.1 39.4)" fill="#545454" font-family="'Open Sans'" font-size="9px">Hours:Minutes:Seconds:Frames</text>
     <text id="tsNum" text-anchor="end" transform="matrix(1 0 0 1 26.3 23.3)" fill="#A8A8A8" font-family="'Open Sans'" font-size="12px">8</text>
     <text id="tsDen" transform="matrix(1 0 0 1 31.5625 33.1)" fill="#A8A8A8" font-family="'Open Sans'" font-size="12px">999</text>
-<!-- JP edit:4 begin -->	
-	<!-- <text id="tempo_cursor" text-anchor="end" fill="#A8A8A8" font-family="'Open Sans'" font-size="20px" transform="matrix(1 0 0 1 80 41)">000</text> -->
-	<!-- <text id="project_BPM" text-anchor="end" fill="#A8A8A8" font-family="'Open Sans'" font-size="7px" transform="matrix(1 0 0 1 40 40)">000.000</text> -->
-	<!-- <text id="tempo_playhead" text-anchor="end" fill="#A8A8A8" font-family="'Open Sans'" font-size="20px" transform="matrix(1 0 0 1 335 41)">000</text> -->
-<!-- JP edit:4 end -->	
+<!-- JP edit:3 begin -->
+    <!-- Fullscreen button positioned to the left of options -->
+    <g id="fullscreenButton" onclick="toggleFullScreen()" style="cursor: pointer;">
+        <text id="fullscreenIcon" x="230" y="30" fill="#A9ABAB" font-size="22px" font-family="'Open Sans', sans-serif"></text>
+    </g>
+	<text id="playrate" text-anchor="start" fill="#03FC98" font-family="'Open Sans'" font-size="7px" transform="matrix(1 0 0 1 50 25)"></text>
+<!-- JP edit:3 end -->	
     <line fill="none" stroke="#545454" stroke-miterlimit="10" x1="23.1" y1="29.5" x2="35" y2="17.6"/>
     <g id="options" class="button">
         <rect x="272.8" fill="#1A1A1A" width="47.2" height="47.2"/>
@@ -1237,12 +1202,11 @@ function closePageHandler()
 	<stop  offset="1.756757e-02" style="stop-color:#000000;stop-opacity:0.9824"/>
 	<stop  offset="1" style="stop-color:#000000;stop-opacity:0"/>
 </linearGradient>
-<!-- JP edit:5 begin -->
-<text id="tempo_cursor" text-anchor="end" fill="#A8A8A8" font-family="'Open Sans'" font-size="20px" transform="matrix(1 0 0 1 45 20)">000</text>
-<text id="project_BPM" text-anchor="end" fill="#A8A8A8" font-family="'Open Sans'" font-size="7px" transform="matrix(1 0 0 1 40 40)">000.000</text>
-<text id="tempo_playhead" text-anchor="end" fill="#fa0522" font-family="'Open Sans'" font-size="20px" transform="matrix(1 0 0 1 300 20)">000</text>
-<text id="tempo_playhead_effectiveBMP" text-anchor="end" fill="#A8A8A8" font-family="'Open Sans'" font-size="7px" transform="matrix(1 0 0 1 300 40)">000.000</text>
-<!-- JP edit:5 end -->	
+<!-- JP edit:4 begin -->
+<text id="tempo_current" text-anchor="start" fill="#A8A8A8" font-family="'Open Sans'" font-size="16px" transform="matrix(1 0 0 1 15 15)"></text>
+<text id="project_bpm" text-anchor="middle" fill="#A8A8A8" font-family="'Open Sans'" font-size="7px" transform="matrix(1 0 0 1 30 31)"></text>
+<text id="tempo_edit_cursor" text-anchor="start" fill="#00D9FF" font-family="'Open Sans'" font-size="7px" transform="matrix(1 0 0 1 50 11)"></text>
+<!-- JP edit:4 end -->	
 <rect id="shadow" y="56" opacity="0.33" fill="url(#shadow_1_)" width="320" height="18"/>
 </svg>
 </div>
