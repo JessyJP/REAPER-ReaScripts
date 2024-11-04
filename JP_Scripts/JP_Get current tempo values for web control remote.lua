@@ -152,7 +152,7 @@
   -- Get the number of clients and increment or decrement
   if (getNumClients() == nil) then -- This is the first instance of the script
      -- Initialize the tempo string
-     reaper.SetExtState(var_section, htmlKey_tempo ,"999_999_999_999",false);
+     reaper.SetExtState(var_section, htmlKey_tempo ,"\u{00A0}_x_x_1",false); -- "999_999_999_999"
 	 reaper.SetExtState(var_section, htmlKey_refreshHz ,tonumber(20),false);
      setNumClients(1);
   else
