@@ -18,7 +18,7 @@ function initializeState() {
     wwr_req("SET/EXTSTATE/CustomWebInterfaceWithTempo/CLIENTDELTA/1");
     
     // Initialize tempo string if not updated yet
-    wwr_req("SET/EXTSTATE/CustomWebInterfaceWithTempo/TEMPOSSTRING/999_999_999_999");
+    // wwr_req("SET/EXTSTATE/CustomWebInterfaceWithTempo/TEMPOSSTRING/\u00A0_x_x_1");
     
     // Start recurring tempo requests
     wwr_req_recur("GET/EXTSTATE/CustomWebInterfaceWithTempo/TEMPOSSTRING", tempoRefreshRateMS);
@@ -49,6 +49,11 @@ function cleanupState() {
 function displayTempoValues(token){
 	if (token[2] == "TEMPOSSTRING")
 	{
+		// Detect that Reaper has (re)started and request a reload
+		if (token[3] == "")
+		{
+			reloadDueToReaperRestart();
+		}
 		// <!-- Get the Tempo array String and delimit the values -->
 		tempoValues = token[3];
 		tempoValues = tempoValues.split("_");
@@ -110,6 +115,22 @@ function setFillColor(elementId, color) {
     }
 }
 
+/* Technically this method is an outsider, but it just so happens that 
+   displayTempoValues, using the token, detects if Reaper has (re)started.
+   So this is rather convenient. This file doesn't need to be aware of any 
+   browser window manipulation, i.e. full screen, but setting a flag is nothing much.*/
+function reloadDueToReaperRestart() {
+	// Set a session flag to track the reload state
+	sessionStorage.setItem("softReloadFlag", "true");
+
+	// Optionally, save additional state data in session storage
+	if (document.fullscreenElement) {
+		sessionStorage.setItem("wasFullscreen", "true");
+	}
+	location.reload();
+	// cleanupState();
+	// initializeState();
+}
 
 // Event listeners for page load and unload
 window.addEventListener("DOMContentLoaded", initializeState);
