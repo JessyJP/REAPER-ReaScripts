@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subproject Importer</title>
+    <script>
+        async function fetchState() {
+            const response = await fetch("/state");
+            const state = await response.json();
+            document.getElementById("projects").innerHTML = state.selected_order.map((proj, index) => 
+                `<li>${index + 1}. ${proj} 
+                    <button onclick="move('${proj}', 'up')">▲</button> 
+                    <button onclick="move('${proj}', 'down')">▼</button> 
+                    <button onclick="removeProject('${proj}')">X</button>
+                </li>`
+            ).join("");
+        }
+
+        async function move(project, direction) {
+            await fetch("/action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: `move_${direction}`, project })
+            });
+            fetchState();
+        }
+
+        async function removeProject(project) {
+            await fetch("/action", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "remove", project })
+            });
+            fetchState();
+        }
+
+        setInterval(fetchState, 2000); // Auto-update every 2s
+    </script>
+</head>
+<body>
+    <h1>Subproject Importer</h1>
+    <button onclick="fetchState()">Refresh</button>
+    <ul id="projects"></ul>
+</body>
+</html>
