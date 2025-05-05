@@ -69,7 +69,14 @@
   	end
   end
 
-  
+  -- helper to format numbers cleanly (now type-safe!)
+  local function fmt(x)
+    if type(x) ~= "number" then
+      return tostring(x)
+    end
+    return string.format("%g", x)
+  end
+
 ---------------------------------------------------------------------------------------------------
 --[[ MAIN function ]]--
 
@@ -112,17 +119,17 @@
         
         -- current_bpm = reaper.TimeMap_GetDividedBpmAtTime(cursor)
         if DEBUG_ON then
-        Debug("[envelope  ]:"..tostring(envelope));
-        Debug("[playPositionTime  ]:"..tostring(playPositionTime));
+        Debug("[envelope  ]:"..fmt(envelope));
+        Debug("[playPositionTime  ]:"..fmt(playPositionTime));
         end
       end
     
     end
     -- Compose Output
-    local OutputString = tostring(project_bpm).."_"..
-                         tostring(tempo_edit_cursor) .. "_".. 
-                         tostring(tempo_palyhead) .. "_".. 
-                         tostring(playrate);
+    local OutputString = fmt(project_bpm).."_"..
+                         fmt(tempo_edit_cursor) .. "_".. 
+                         fmt(tempo_palyhead) .. "_".. 
+                         fmt(playrate);
                    
     -- Set the array state variable state
     reaper.SetExtState(var_section, htmlKey_tempo ,OutputString,false);
